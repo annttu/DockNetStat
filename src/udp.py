@@ -4,7 +4,7 @@
 import logging
 import socket
 import signal
-
+from errors import ConnectionError
 
 
 logger = logging.getLogger('Udp')
@@ -24,10 +24,15 @@ class Udp(object):
         Test if connection is working
         """
         got_retval = False
-        udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         signal.signal(signal.SIGALRM, timeout_handler)
-        signal.alarm(3)
-        udp_socket.sendto(self.echo_msg, (self.host, self.port))
+        signal.alarm(2)
+        try:
+            udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            udp_socket.sendto(self.echo_msg, (self.host, self.port))
+        except socket.error as e:
+            signal.alarm(0)
+            logger.exception(e)
+            return False
         while True:
             try:
                 recv_data, addr = udp_socket.recvfrom(2048)

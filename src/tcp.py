@@ -4,7 +4,7 @@
 import logging
 import socket
 import signal
-
+from errors import ConnectionError
 
 
 logger = logging.getLogger('Tcp')
@@ -24,11 +24,16 @@ class Tcp(object):
         Test if connection is working
         """
         got_retval = False
-        tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        tcp_socket.connect((self.host, self.port))
         signal.signal(signal.SIGALRM, timeout_handler)
-        signal.alarm(3)
-        tcp_socket.send(self.echo_msg)
+        signal.alarm(2)
+        try:
+            tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            tcp_socket.connect((self.host, self.port))
+            tcp_socket.send(self.echo_msg)
+        except socket.error as e:
+            signal.alarm(0)
+            logger.exception(e)
+            return False
         while True:
             try:
                 recv_data = tcp_socket.recv(2048)

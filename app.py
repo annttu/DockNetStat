@@ -28,8 +28,16 @@ class DocNetStatDelegate(NSObject):
 
         self.statusItem = NSStatusBar.systemStatusBar().statusItemWithLength_(NSVariableStatusItemLength)
         self.statusImage = NSImage.alloc()
-        icon = os.path.join(os.path.dirname(os.path.abspath(__file__)),'images/OK-32.png')
-        self.statusImage.initWithContentsOfFile_(icon)
+
+
+        self.error = False
+        # Icons
+        mydir = os.path.dirname(os.path.abspath(__file__))
+        self.ok_icon = os.path.join(mydir,'images/OK.png')
+        self.tcp_icon = os.path.join(mydir,'images/TCP-red.png')
+        self.udp_icon = os.path.join(mydir,'images/UDP-red.png')
+        self.error_icon = os.path.join(mydir,'images/ERROR-red.png')
+        self.statusImage.initWithContentsOfFile_(self.ok_icon)
         self.statusItem.setImage_(self.statusImage)
         self.statusItem.setToolTip_('NetStat')
         self.statusItem.setHighlightMode_(TRUE)
@@ -84,19 +92,37 @@ class DocNetStatDelegate(NSObject):
 
 
     def sync_(self, notification):
+        tcp_error = False
+        udp_error = False
         if self.tcp.test():
             self.tcp_status.setTitle_('TCP Ok')
         else:
             self.tcp_status.setTitle_('TCP Error')
+            tcp_error = True
         if self.udp.test():
             self.udp_status.setTitle_('UDP Ok')
         else:
+            udp_error = True
             self.udp_status.setTitle_('UDP Error')
         ret = self.ping.ping("217.30.184.184")
         if ret['alive']:
-            self.ping_status("Ping: %s" % ret['time'])
+            self.ping_status.setTitle_("Ping: %s" % ret['time'])
+            self.statusItem.setTitle_(u"%2.1fms" % ret['time'])
         else:
-            self.ping_status("Ping Error")
+            self.ping_status.setTitle_("Ping Error")
+            self.statusItem.setTitle_(u"E")
+
+        if tcp_error or udp_error:
+            if not self.error:
+               self.error = True
+            if not tcp_error and udp_error:
+                self.statusImage.initWithContentsOfFile_(self.udp_icon)
+            elif tcp_error and not udp_error:
+                self.statusImage.initWithContentsOfFile_(self.tcp_icon)
+            else:
+                self.statusImage.initWithContentsOfFile_(self.error_icon)
+        elif self.error:
+            self.statusImage.initWithContentsOfFile_(self.ok_icon)
 
 if __name__ == "__main__":
     try:
