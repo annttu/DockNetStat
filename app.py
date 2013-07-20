@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 # encoding: utf-8
 
-import os, sys
+import os
+import sys
 
 d = os.path.dirname(os.path.abspath(__file__))
 
@@ -11,6 +12,7 @@ from src.ping import Ping
 from src.tcp import Tcp
 from src.udp import Udp
 
+import logging
 
 # Apple stuff
 from Foundation import *
@@ -18,8 +20,10 @@ from AppKit import *
 from PyObjCTools import AppHelper
 
 UPDATE_INTERVAL = 5
+PING_INTERVAL = 2
 
 start_time = NSDate.date()
+ping_start_time = NSDate.date()
 
 
 def hide_from_dock():
@@ -77,7 +81,7 @@ class DocNetStatDelegate(NSObject):
         # Sync and Quit buttons
 
         menuitem = NSMenuItem.alloc().initWithTitle_action_keyEquivalent_(
-            'Sync...', 'sync:', '')
+            'Sync...', 'syncall:', '')
         self.menu.addItem_(menuitem)
 
         menuitem = NSMenuItem.alloc().initWithTitle_action_keyEquivalent_(
@@ -86,17 +90,36 @@ class DocNetStatDelegate(NSObject):
         self.statusItem.setMenu_(self.menu)
         self.timer = NSTimer.alloc().initWithFireDate_interval_target_selector_userInfo_repeats_(
             start_time, float(UPDATE_INTERVAL), self, 'sync:', None, True)
+        self.ping_timer = NSTimer.alloc().initWithFireDate_interval_target_selector_userInfo_repeats_(
+            ping_start_time, float(PING_INTERVAL), self, 'pingsync:', None, True)
 
         # Initialize Ping, Tcp and Udp
 
         self.udp = Udp('217.30.184.184', 61956)
         self.tcp = Tcp('217.30.184.184', 61956)
-        self.ping = Ping()
+        self.ping = Ping('217.30.184.184')
+        self.ping.start()
 
         NSRunLoop.currentRunLoop().addTimer_forMode_(self.timer,
                                                      NSDefaultRunLoopMode)
+        NSRunLoop.currentRunLoop().addTimer_forMode_(self.ping_timer,
+                                                     NSDefaultRunLoopMode)
         self.timer.fire()
+        self.ping_timer.fire()
         NSLog("DocNetStat started!")
+
+    def syncall_(self, notification):
+        self.pingsync_(notification)
+        self.sync_(notification)
+
+    def pingsync_(self, notification):
+        ret = self.ping.ping()
+        if ret['alive']:
+            self.ping_status.setTitle_("Ping: %s" % ret['time'])
+            self.statusItem.setTitle_(u"%2.1fms" % ret['time'])
+        else:
+            self.ping_status.setTitle_("Ping Error")
+            self.statusItem.setTitle_(u"E")
 
     def sync_(self, notification):
         tcp_error = False
@@ -111,13 +134,6 @@ class DocNetStatDelegate(NSObject):
         else:
             udp_error = True
             self.udp_status.setTitle_('UDP Error')
-        ret = self.ping.ping("217.30.184.184")
-        if ret['alive']:
-            self.ping_status.setTitle_("Ping: %s" % ret['time'])
-            self.statusItem.setTitle_(u"%2.1fms" % ret['time'])
-        else:
-            self.ping_status.setTitle_("Ping Error")
-            self.statusItem.setTitle_(u"E")
 
         if tcp_error or udp_error:
             if not self.error:
@@ -131,8 +147,17 @@ class DocNetStatDelegate(NSObject):
         elif self.error:
             self.statusImage.initWithContentsOfFile_(self.ok_icon)
 
+    def applicationShouldTerminate_(self, notification):
+        if self.ping.is_alive():
+            self.ping.stop()
+            self.ping.join()
+        return 1
+
 if __name__ == "__main__":
     try:
+        logging.basicConfig()
+        logger = logging.getLogger()
+        logger.setLevel(logging.INFO)
         app = NSApplication.sharedApplication()
         app.hide_(TRUE)
         delegate = DocNetStatDelegate.alloc().init()
