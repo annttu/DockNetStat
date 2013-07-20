@@ -9,13 +9,13 @@ Usage:
 from setuptools import setup
 
 APP = ['app.py']
-DATA_FILES = []
+DATA_FILES = ['app.py', 'images']
 OPTIONS = {'argv_emulation': True,
-           'iconfile':'images/logo.icns',}
+           'iconfile': 'images/logo.icns'}
 
 setup(
     app=APP,
-    name = 'DocNetStat',
+    name='DocNetStat',
     data_files=DATA_FILES,
     options={'py2app': OPTIONS},
     setup_requires=['py2app'],

@@ -1,42 +1,49 @@
 #!/usr/bin/env python
 # encoding: utf-8
 
+import os, sys
+
+d = os.path.dirname(os.path.abspath(__file__))
+
+sys.path.insert(0, d)
+
 from src.ping import Ping
 from src.tcp import Tcp
 from src.udp import Udp
 
-import os
 
 # Apple stuff
 from Foundation import *
 from AppKit import *
 from PyObjCTools import AppHelper
 
-UPDATE_INTERVAL=5
+UPDATE_INTERVAL = 5
 
 start_time = NSDate.date()
 
+
 def hide_from_dock():
     """hide icon from dock"""
-    NSApplicationActivationPolicyRegular = 0
-    NSApplicationActivationPolicyAccessory = 1
+    #NSApplicationActivationPolicyRegular = 0
+    #NSApplicationActivationPolicyAccessory = 1
     NSApplicationActivationPolicyProhibited = 2
     NSApp.setActivationPolicy_(NSApplicationActivationPolicyProhibited)
+
 
 class DocNetStatDelegate(NSObject):
     def applicationDidFinishLaunching_(self, sender):
 
-        self.statusItem = NSStatusBar.systemStatusBar().statusItemWithLength_(NSVariableStatusItemLength)
+        self.statusItem = NSStatusBar.systemStatusBar().statusItemWithLength_(
+            NSVariableStatusItemLength)
         self.statusImage = NSImage.alloc()
-
 
         self.error = False
         # Icons
         mydir = os.path.dirname(os.path.abspath(__file__))
-        self.ok_icon = os.path.join(mydir,'images/OK.png')
-        self.tcp_icon = os.path.join(mydir,'images/TCP-red.png')
-        self.udp_icon = os.path.join(mydir,'images/UDP-red.png')
-        self.error_icon = os.path.join(mydir,'images/ERROR-red.png')
+        self.ok_icon = os.path.join(mydir, 'images/OK.png')
+        self.tcp_icon = os.path.join(mydir, 'images/TCP-red.png')
+        self.udp_icon = os.path.join(mydir, 'images/UDP-red.png')
+        self.error_icon = os.path.join(mydir, 'images/ERROR-red.png')
         self.statusImage.initWithContentsOfFile_(self.ok_icon)
         self.statusItem.setImage_(self.statusImage)
         self.statusItem.setToolTip_('NetStat')
@@ -62,34 +69,34 @@ class DocNetStatDelegate(NSObject):
 
         # Udp
         self.udp_status = NSMenuItem.alloc().init()
-        self.udp_status.setTitle_("TCP status")
-        self.udp_status.setToolTip_("Status of TCP-connections")
-        self.udp_status.setKeyEquivalent_('t')
+        self.udp_status.setTitle_("UDP status")
+        self.udp_status.setToolTip_("Status of UDP-connections")
+        self.udp_status.setKeyEquivalent_('u')
         self.menu.addItem_(self.udp_status)
 
         # Sync and Quit buttons
 
-        menuitem = NSMenuItem.alloc().initWithTitle_action_keyEquivalent_('Sync...', 'sync:', '')
+        menuitem = NSMenuItem.alloc().initWithTitle_action_keyEquivalent_(
+            'Sync...', 'sync:', '')
         self.menu.addItem_(menuitem)
 
-        menuitem = NSMenuItem.alloc().initWithTitle_action_keyEquivalent_('Quit', 'terminate:', '')
+        menuitem = NSMenuItem.alloc().initWithTitle_action_keyEquivalent_(
+            'Quit', 'terminate:', '')
         self.menu.addItem_(menuitem)
         self.statusItem.setMenu_(self.menu)
         self.timer = NSTimer.alloc().initWithFireDate_interval_target_selector_userInfo_repeats_(
             start_time, float(UPDATE_INTERVAL), self, 'sync:', None, True)
 
-
         # Initialize Ping, Tcp and Udp
 
         self.udp = Udp('217.30.184.184', 61956)
-        self.tcp = Tcp('217.30.184.184' ,61956)
+        self.tcp = Tcp('217.30.184.184', 61956)
         self.ping = Ping()
 
-
-        NSRunLoop.currentRunLoop().addTimer_forMode_(self.timer, NSDefaultRunLoopMode)
+        NSRunLoop.currentRunLoop().addTimer_forMode_(self.timer,
+                                                     NSDefaultRunLoopMode)
         self.timer.fire()
         NSLog("DocNetStat started!")
-
 
     def sync_(self, notification):
         tcp_error = False
@@ -114,7 +121,7 @@ class DocNetStatDelegate(NSObject):
 
         if tcp_error or udp_error:
             if not self.error:
-               self.error = True
+                self.error = True
             if not tcp_error and udp_error:
                 self.statusImage.initWithContentsOfFile_(self.udp_icon)
             elif tcp_error and not udp_error:
