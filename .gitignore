@@ -1,3 +1,6 @@
 *.pyc
 env/
 images/*.ai
+Applications/DockNetStat.app
+build/
+dist/

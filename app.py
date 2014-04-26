@@ -25,6 +25,8 @@ PING_INTERVAL = 2
 start_time = NSDate.date()
 ping_start_time = NSDate.date()
 
+SERVER_ADDRESS = '217.30.184.184'
+SERVER_PORT = 61956
 
 def hide_from_dock():
     """hide icon from dock"""
@@ -95,9 +97,9 @@ class DocNetStatDelegate(NSObject):
 
         # Initialize Ping, Tcp and Udp
 
-        self.udp = Udp('217.30.184.184', 61956)
-        self.tcp = Tcp('217.30.184.184', 61956)
-        self.ping = Ping('217.30.184.184')
+        self.udp = Udp(SERVER_ADDRESS, SERVER_PORT)
+        self.tcp = Tcp(SERVER_ADDRESS, SERVER_PORT)
+        self.ping = Ping(SERVER_ADDRESS)
         self.ping.start()
 
         NSRunLoop.currentRunLoop().addTimer_forMode_(self.timer,
